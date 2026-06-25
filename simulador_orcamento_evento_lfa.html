@@ -1,0 +1,154 @@
+<h2 class="sr-only">Simulador de orçamento para evento LFA — churrasco, matraquilhos e piscina</h2>
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.be-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;text-align:center;}
+.fr{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.fr label{flex:1;font-size:13px;color:var(--color-text-secondary);}
+.fr input{width:72px;text-align:right;}
+.eu{font-size:12px;color:var(--color-text-tertiary);width:14px;}
+.cc{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;}
+.chd{font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 12px;display:flex;align-items:center;gap:6px;}
+.tr{border-top:0.5px solid var(--color-border-tertiary);padding-top:10px;display:flex;justify-content:space-between;align-items:center;}
+</style>
+<div style="padding:.75rem 0">
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+<div class="cc">
+<p class="chd"><i class="ti ti-pin" aria-hidden="true" style="font-size:16px"></i>Custos fixos</p>
+<div class="fr"><label>Aluguer do espaço</label><input type="number" id="fc0" value="0" min="0" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Carvão + utensílios</label><input type="number" id="fc1" value="25" min="0" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Material descartável</label><input type="number" id="fc2" value="15" min="0" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Prémios / torneio</label><input type="number" id="fc3" value="0" min="0" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Outros</label><input type="number" id="fc4" value="0" min="0" oninput="rc()"><span class="eu">€</span></div>
+<div class="tr"><span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Total fixo</span><span id="fct" style="font-size:14px;font-weight:500;color:var(--color-text-primary)">40,00 €</span></div>
+</div>
+
+<div class="cc">
+<p class="chd"><i class="ti ti-user" aria-hidden="true" style="font-size:16px"></i>Custos variáveis <span style="font-weight:400;color:var(--color-text-secondary);font-size:12px">(por pessoa)</span></p>
+<div class="fr"><label>Carne + pão</label><input type="number" id="vc0" value="5.00" min="0" step="0.5" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Bebidas</label><input type="number" id="vc1" value="2.50" min="0" step="0.5" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Acompanhamentos</label><input type="number" id="vc2" value="1.50" min="0" step="0.5" oninput="rc()"><span class="eu">€</span></div>
+<div class="fr"><label>Outros (p/pessoa)</label><input type="number" id="vc3" value="0" min="0" step="0.5" oninput="rc()"><span class="eu">€</span></div>
+<div style="height:36px"></div>
+<div class="tr"><span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Total variável/pessoa</span><span id="vct" style="font-size:14px;font-weight:500;color:var(--color-text-primary)">9,00 €</span></div>
+</div>
+</div>
+
+<div class="cc" style="margin-bottom:1rem;overflow-x:auto;padding:0">
+<div style="padding:.875rem 1.25rem .625rem;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:8px">
+<i class="ti ti-table" aria-hidden="true" style="font-size:16px;color:var(--color-text-secondary)"></i>
+<span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Comparação de cenários</span>
+<span style="margin-left:auto;font-size:12px;color:var(--color-text-tertiary)">3 preços de bilhete</span>
+</div>
+<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
+<thead>
+<tr style="background:var(--color-background-secondary)">
+<th rowspan="2" style="padding:8px 12px;text-align:center;font-weight:500;font-size:12px;color:var(--color-text-secondary);border-bottom:.5px solid var(--color-border-tertiary)">Pess.</th>
+<th rowspan="2" style="padding:8px 12px;text-align:right;font-weight:500;font-size:12px;color:var(--color-text-secondary);border-bottom:.5px solid var(--color-border-tertiary)">Custo total</th>
+<th colspan="2" style="padding:8px 12px;text-align:center;font-weight:500;font-size:12px;color:#639922;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Bilhete 10 €</th>
+<th colspan="2" style="padding:8px 12px;text-align:center;font-weight:500;font-size:12px;color:#378ADD;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Bilhete 15 €</th>
+<th colspan="2" style="padding:8px 12px;text-align:center;font-weight:500;font-size:12px;color:#7F77DD;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Bilhete 20 €</th>
+</tr>
+<tr style="background:var(--color-background-secondary)">
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#639922;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Receita</th>
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#639922;border-bottom:.5px solid var(--color-border-tertiary)">Lucro/Prej.</th>
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#378ADD;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Receita</th>
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#378ADD;border-bottom:.5px solid var(--color-border-tertiary)">Lucro/Prej.</th>
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#7F77DD;border-bottom:.5px solid var(--color-border-tertiary);border-left:.5px solid var(--color-border-tertiary)">Receita</th>
+<th style="padding:5px 12px;text-align:right;font-weight:400;font-size:11px;color:#7F77DD;border-bottom:.5px solid var(--color-border-tertiary)">Lucro/Prej.</th>
+</tr>
+</thead>
+<tbody id="tbl"></tbody>
+</table>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1rem">
+<div class="be-card">
+<p style="font-size:11px;font-weight:500;color:#639922;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px">Bilhete 10 €</p>
+<p id="be10" style="font-size:26px;font-weight:500;color:var(--color-text-primary);margin:0 0 2px;line-height:1">—</p>
+<p style="font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px">pessoas p/ equilíbrio</p>
+<p style="font-size:11px;color:var(--color-text-secondary);margin:0">Margem/pessoa: <span id="cm10" style="font-weight:500;color:var(--color-text-primary)">—</span></p>
+</div>
+<div class="be-card">
+<p style="font-size:11px;font-weight:500;color:#378ADD;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px">Bilhete 15 €</p>
+<p id="be15" style="font-size:26px;font-weight:500;color:var(--color-text-primary);margin:0 0 2px;line-height:1">—</p>
+<p style="font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px">pessoas p/ equilíbrio</p>
+<p style="font-size:11px;color:var(--color-text-secondary);margin:0">Margem/pessoa: <span id="cm15" style="font-weight:500;color:var(--color-text-primary)">—</span></p>
+</div>
+<div class="be-card">
+<p style="font-size:11px;font-weight:500;color:#7F77DD;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px">Bilhete 20 €</p>
+<p id="be20" style="font-size:26px;font-weight:500;color:var(--color-text-primary);margin:0 0 2px;line-height:1">—</p>
+<p style="font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px">pessoas p/ equilíbrio</p>
+<p style="font-size:11px;color:var(--color-text-secondary);margin:0">Margem/pessoa: <span id="cm20" style="font-weight:500;color:var(--color-text-primary)">—</span></p>
+</div>
+</div>
+
+<div class="cc">
+<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+<i class="ti ti-chart-line" aria-hidden="true" style="font-size:16px;color:var(--color-text-secondary)"></i>
+<span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Receita vs. custo total</span>
+<div style="margin-left:auto;display:flex;gap:14px;flex-wrap:wrap">
+<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)"><span style="width:12px;height:2px;background:#639922;display:inline-block;border-radius:1px"></span>10 €</span>
+<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)"><span style="width:12px;height:2px;background:#378ADD;display:inline-block;border-radius:1px"></span>15 €</span>
+<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)"><span style="width:12px;height:2px;background:#7F77DD;display:inline-block;border-radius:1px"></span>20 €</span>
+<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)"><span style="display:inline-block;width:14px;border-top:2px dashed #E24B4A"></span>Custo</span>
+</div>
+</div>
+<div style="position:relative;width:100%;height:260px">
+<canvas id="ch" role="img" aria-label="Gráfico de linhas com receita para bilhetes de 10, 15 e 20 euros versus custo total, de 10 a 50 participantes">Receita vs. custo total por número de participantes.</canvas>
+</div>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const P=[10,20,30,40,50],PR=[10,15,20],CC={'10':'#639922','15':'#378ADD','20':'#7F77DD'};
+let ch;
+function gfc(){return[0,1,2,3,4].reduce((s,i)=>s+(parseFloat(document.getElementById('fc'+i).value)||0),0);}
+function gvc(){return[0,1,2,3].reduce((s,i)=>s+(parseFloat(document.getElementById('vc'+i).value)||0),0);}
+function fe(v){const n=v<0,a=Math.abs(v),s=a.toFixed(2).split('.');return(n?'-':'')+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+s[1]+' €';}
+function fp(v){const n=v<0,a=Math.abs(v),s=a.toFixed(2).split('.');return(v>0?'+':n?'-':'')+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+s[1]+' €';}
+function bc(p,fc,vc){return p<=vc?Infinity:Math.ceil(fc/(p-vc));}
+function rc(){
+  const FC=gfc(),VC=gvc();
+  document.getElementById('fct').textContent=fe(FC);
+  document.getElementById('vct').textContent=fe(VC);
+  PR.forEach(p=>{
+    const b=bc(p,FC,VC),cm=p-VC;
+    document.getElementById('be'+p).textContent=b===Infinity?'∞':b;
+    document.getElementById('cm'+p).textContent=fe(cm);
+  });
+  const tb=document.getElementById('tbl');
+  tb.innerHTML='';
+  P.forEach(n=>{
+    const tc=FC+VC*n,tr=document.createElement('tr');
+    tr.style.borderBottom='.5px solid var(--color-border-tertiary)';
+    let h=`<td style="padding:9px 12px;text-align:center;font-weight:500;color:var(--color-text-primary);font-size:13px">${n}</td>`;
+    h+=`<td style="padding:9px 12px;text-align:right;font-size:12px;color:var(--color-text-secondary)">${fe(tc)}</td>`;
+    PR.forEach(p=>{
+      const rev=p*n,pr=rev-tc;
+      const pc=pr>0?'var(--color-text-success)':pr<0?'var(--color-text-danger)':'var(--color-text-warning)';
+      h+=`<td style="padding:9px 12px;text-align:right;font-size:12px;color:var(--color-text-secondary);border-left:.5px solid var(--color-border-tertiary)">${fe(rev)}</td>`;
+      h+=`<td style="padding:9px 12px;text-align:right;font-size:12px;font-weight:500;color:${pc}">${fp(pr)}</td>`;
+    });
+    tr.innerHTML=h;tb.appendChild(tr);
+  });
+  if(ch){ch.destroy();ch=null;}
+  ch=new Chart(document.getElementById('ch'),{
+    type:'line',
+    data:{labels:P.map(p=>p+' p.'),datasets:[
+      {label:'Custo total',data:P.map(n=>+(FC+VC*n).toFixed(2)),borderColor:'#E24B4A',backgroundColor:'transparent',borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#E24B4A',borderWidth:2,tension:0},
+      ...PR.map(p=>({label:'Receita '+p+'€',data:P.map(n=>+(p*n).toFixed(2)),borderColor:CC[String(p)],backgroundColor:'transparent',pointRadius:4,pointBackgroundColor:CC[String(p)],borderWidth:2,tension:0}))
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed.y,a=Math.abs(v),s=a.toFixed(2).split('.');return ctx.dataset.label+': '+(v<0?'-':'')+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+s[1]+' €';}}}},
+      scales:{
+        x:{grid:{color:'rgba(128,128,128,.12)'},ticks:{font:{size:12},color:'#888',autoSkip:false}},
+        y:{grid:{color:'rgba(128,128,128,.12)'},ticks:{font:{size:11},color:'#888',callback:v=>Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')+' €'}}
+      }
+    }
+  });
+}
+rc();
+</script>
