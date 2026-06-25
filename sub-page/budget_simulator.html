@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Orçamento — Evento LFA</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --card:    #1c2333;
+  --border:  #30363d;
+  --accent:  #f97316;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --hint:    #656d76;
+  --green:   #4ade80;
+  --red:     #f87171;
+  --yellow:  #fbbf24;
+  --r-lg:    12px;
+  --r-md:    8px;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 28px 16px 48px;
+}
+
+.container { max-width: 860px; margin: 0 auto; }
+
+/* ── Header ── */
+header {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.lfa-pill {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+
+header h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+header p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── Grid ── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.card-title svg { flex-shrink: 0; opacity: .55; }
+
+/* ── Fields ── */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.field label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field input[type="number"] {
+  width: 76px;
+  text-align: right;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  -moz-appearance: textfield;
+}
+
+.field input[type="number"]:focus { border-color: var(--accent); }
+.field input[type="number"]::-webkit-inner-spin-button,
+.field input[type="number"]::-webkit-outer-spin-button { opacity: .3; }
+
+.eur { font-size: 12px; color: var(--hint); width: 14px; }
+
+.spacer { height: 36px; }
+
+.total-line {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-line .label { font-size: 13px; font-weight: 500; color: var(--text); }
+.total-line .amount { font-size: 14px; font-weight: 600; color: var(--accent); }
+
+/* ── Table ── */
+.table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.table-head {
+  padding: 13px 18px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-head h2 { font-size: 14px; font-weight: 500; color: var(--text); }
+.table-head .note { margin-left: auto; font-size: 12px; color: var(--hint); }
+.table-head svg { opacity: .45; flex-shrink: 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+
+thead th {
+  padding: 8px 12px;
+  text-align: right;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+thead th:first-child { text-align: center; }
+thead th.g  { color: #63bf41; }
+thead th.b  { color: #5baaee; }
+thead th.pu { color: #b39bfb; }
+thead th.bl { border-left: 1px solid var(--border); }
+
+tbody td {
+  padding: 9px 12px;
+  text-align: right;
+  border-bottom: 1px solid rgba(48,54,61,.5);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+tbody td:first-child { text-align: center; font-weight: 600; color: var(--text); font-size: 13px; }
+tbody td.bl { border-left: 1px solid rgba(48,54,61,.4); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.02); }
+
+.pos { color: var(--green) !important; font-weight: 500; }
+.neg { color: var(--red)   !important; font-weight: 500; }
+.zer { color: var(--yellow)!important; font-weight: 500; }
+
+/* ── BE cards ── */
+.be-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.be-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  text-align: center;
+}
+
+.be-card .tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 8px;
+}
+
+.be-card .num {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.be-card .sub { font-size: 11px; color: var(--hint); margin-bottom: 10px; }
+.be-card .cm  { font-size: 12px; color: var(--muted); }
+.be-card .cm span { font-weight: 500; color: var(--text); }
+
+.be-card.c1 { border-top: 2px solid #63bf41; }
+.be-card.c1 .tag { color: #63bf41; }
+.be-card.c2 { border-top: 2px solid #5baaee; }
+.be-card.c2 .tag { color: #5baaee; }
+.be-card.c3 { border-top: 2px solid #b39bfb; }
+.be-card.c3 .tag { color: #b39bfb; }
+
+/* ── Chart ── */
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; }
+
+.chart-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.chart-top h2 { font-size: 14px; font-weight: 500; color: var(--text); }
+.chart-top svg { opacity: .45; }
+
+.legend { margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap; }
+
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+
+.ldot { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+
+.chart-box { position: relative; width: 100%; height: 270px; }
+
+/* ── Footer ── */
+footer {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--hint);
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="header-top">
+    <span class="lfa-pill">LFA</span>
+    <h1>Simulador de Orçamento</h1>
+  </div>
+  <p>Churrasco &middot; Torneio de Matraquilhos &middot; Piscina &mdash; Angariação de Fundos</p>
+</header>
+
+<div class="grid-2">
+
+  <!-- Custos fixos -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2l2.5 5.5H20l-4.5 4 1.5 6.5L12 15l-5 3 1.5-6.5L4 7.5h5.5z"/>
+      </svg>
+      Custos fixos
+    </div>
+    <div class="field"><label>Aluguer do espaço</label><input type="number" id="fc0" value="0" min="0" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Carvão + utensílios</label><input type="number" id="fc1" value="25" min="0" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Material descartável</label><input type="number" id="fc2" value="15" min="0" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Prémios / torneio</label><input type="number" id="fc3" value="0" min="0" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Outros</label><input type="number" id="fc4" value="0" min="0" oninput="rc()"><span class="eur">€</span></div>
+    <div class="total-line">
+      <span class="label">Total fixo</span>
+      <span class="amount" id="fct">40,00 €</span>
+    </div>
+  </div>
+
+  <!-- Custos variáveis -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Custos variáveis
+      <span style="font-weight:400;color:var(--hint);font-size:12px">(por pessoa)</span>
+    </div>
+    <div class="field"><label>Carne + pão</label><input type="number" id="vc0" value="5.00" min="0" step="0.5" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Bebidas</label><input type="number" id="vc1" value="2.50" min="0" step="0.5" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Acompanhamentos</label><input type="number" id="vc2" value="1.50" min="0" step="0.5" oninput="rc()"><span class="eur">€</span></div>
+    <div class="field"><label>Outros (p/pessoa)</label><input type="number" id="vc3" value="0" min="0" step="0.5" oninput="rc()"><span class="eur">€</span></div>
+    <div class="spacer"></div>
+    <div class="total-line">
+      <span class="label">Total variável/pessoa</span>
+      <span class="amount" id="vct">9,00 €</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tabela de comparação -->
+<div class="table-wrap">
+  <div class="table-head">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>
+    </svg>
+    <h2>Comparação de cenários</h2>
+    <span class="note">3 preços de bilhete</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2" style="text-align:center;vertical-align:middle;">Pess.</th>
+        <th rowspan="2" style="vertical-align:middle;">Custo total</th>
+        <th colspan="2" class="g bl">Bilhete 10 €</th>
+        <th colspan="2" class="b bl">Bilhete 15 €</th>
+        <th colspan="2" class="pu bl">Bilhete 20 €</th>
+      </tr>
+      <tr>
+        <th class="g bl"  style="font-weight:400;font-size:11px;">Receita</th>
+        <th class="g"     style="font-weight:400;font-size:11px;">Lucro/Prej.</th>
+        <th class="b bl"  style="font-weight:400;font-size:11px;">Receita</th>
+        <th class="b"     style="font-weight:400;font-size:11px;">Lucro/Prej.</th>
+        <th class="pu bl" style="font-weight:400;font-size:11px;">Receita</th>
+        <th class="pu"    style="font-weight:400;font-size:11px;">Lucro/Prej.</th>
+      </tr>
+    </thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+
+<!-- Ponto de equilíbrio -->
+<div class="be-grid">
+  <div class="be-card c1">
+    <div class="tag">Bilhete 10 €</div>
+    <div class="num" id="be10">—</div>
+    <div class="sub">pessoas p/ equilíbrio</div>
+    <div class="cm">Margem/pessoa: <span id="cm10">—</span></div>
+  </div>
+  <div class="be-card c2">
+    <div class="tag">Bilhete 15 €</div>
+    <div class="num" id="be15">—</div>
+    <div class="sub">pessoas p/ equilíbrio</div>
+    <div class="cm">Margem/pessoa: <span id="cm15">—</span></div>
+  </div>
+  <div class="be-card c3">
+    <div class="tag">Bilhete 20 €</div>
+    <div class="num" id="be20">—</div>
+    <div class="sub">pessoas p/ equilíbrio</div>
+    <div class="cm">Margem/pessoa: <span id="cm20">—</span></div>
+  </div>
+</div>
+
+<!-- Gráfico -->
+<div class="chart-card">
+  <div class="chart-top">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="4,17 8,13 12,15 16,10 20,7"/><path d="M4 21h16"/>
+    </svg>
+    <h2>Receita vs. custo total</h2>
+    <div class="legend">
+      <div class="legend-item"><span class="ldot" style="background:#63bf41"></span>10 €</div>
+      <div class="legend-item"><span class="ldot" style="background:#5baaee"></span>15 €</div>
+      <div class="legend-item"><span class="ldot" style="background:#b39bfb"></span>20 €</div>
+      <div class="legend-item">
+        <span style="display:inline-block;width:14px;border-top:2px dashed #f87171"></span>
+        Custo
+      </div>
+    </div>
+  </div>
+  <div class="chart-box">
+    <canvas id="ch" role="img" aria-label="Gráfico de linhas com receita para bilhetes de 10, 15 e 20 euros versus custo total, de 10 a 50 participantes">
+      Receita vs. custo total por número de participantes.
+    </canvas>
+  </div>
+</div>
+
+<footer>Lopes Fight Academy &mdash; Simulador de Orçamento para Evento</footer>
+
+</div>
+
+<script>
+const P  = [10, 20, 30, 40, 50];
+const PR = [10, 15, 20];
+const CC = { '10': '#63bf41', '15': '#5baaee', '20': '#b39bfb' };
+let ch;
+
+function gfc() {
+  return [0,1,2,3,4].reduce((s,i) => s + (parseFloat(document.getElementById('fc'+i).value) || 0), 0);
+}
+function gvc() {
+  return [0,1,2,3].reduce((s,i) => s + (parseFloat(document.getElementById('vc'+i).value) || 0), 0);
+}
+
+function fe(v) {
+  const n = v < 0, a = Math.abs(v), s = a.toFixed(2).split('.');
+  return (n ? '-' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + s[1] + ' €';
+}
+function fp(v) {
+  const n = v < 0, a = Math.abs(v), s = a.toFixed(2).split('.');
+  return (v > 0 ? '+' : n ? '-' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + s[1] + ' €';
+}
+function faxis(v) {
+  return Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+}
+
+function be(p, fc, vc) {
+  return p <= vc ? Infinity : Math.ceil(fc / (p - vc));
+}
+
+function rc() {
+  const FC = gfc(), VC = gvc();
+
+  document.getElementById('fct').textContent = fe(FC);
+  document.getElementById('vct').textContent = fe(VC);
+
+  PR.forEach(p => {
+    const b = be(p, FC, VC), cm = p - VC;
+    document.getElementById('be' + p).textContent = b === Infinity ? '∞' : b;
+    document.getElementById('cm' + p).textContent = fe(cm);
+  });
+
+  const tb = document.getElementById('tbl');
+  tb.innerHTML = '';
+  P.forEach(n => {
+    const tc = FC + VC * n;
+    const tr = document.createElement('tr');
+    let h = `<td>${n}</td><td>${fe(tc)}</td>`;
+    PR.forEach(p => {
+      const rev = p * n, pr = rev - tc;
+      const cls = pr > 0 ? 'pos' : pr < 0 ? 'neg' : 'zer';
+      h += `<td class="bl">${fe(rev)}</td><td class="${cls}">${fp(pr)}</td>`;
+    });
+    tr.innerHTML = h;
+    tb.appendChild(tr);
+  });
+
+  if (ch) { ch.destroy(); ch = null; }
+
+  ch = new Chart(document.getElementById('ch'), {
+    type: 'line',
+    data: {
+      labels: P.map(p => p + ' p.'),
+      datasets: [
+        {
+          label: 'Custo total',
+          data: P.map(n => +(FC + VC * n).toFixed(2)),
+          borderColor: '#f87171',
+          backgroundColor: 'transparent',
+          borderDash: [5, 4],
+          pointRadius: 4,
+          pointBackgroundColor: '#f87171',
+          borderWidth: 2,
+          tension: 0
+        },
+        ...PR.map(p => ({
+          label: 'Receita ' + p + '€',
+          data: P.map(n => +(p * n).toFixed(2)),
+          borderColor: CC[String(p)],
+          backgroundColor: 'transparent',
+          pointRadius: 4,
+          pointBackgroundColor: CC[String(p)],
+          borderWidth: 2,
+          tension: 0
+        }))
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y, a = Math.abs(v), s = a.toFixed(2).split('.');
+              return ctx.dataset.label + ': ' + (v < 0 ? '-' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + s[1] + ' €';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,.07)' },
+          ticks: { color: '#8b949e', font: { size: 12 }, maxRotation: 0 }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,.07)' },
+          ticks: { color: '#8b949e', font: { size: 11 }, callback: faxis }
+        }
+      }
+    }
+  });
+}
+
+rc();
+</script>
+</body>
+</html>
