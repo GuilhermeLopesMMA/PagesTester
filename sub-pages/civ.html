@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>MicroCiv</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif}
+body{background:#1a1c22;color:#eee;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#bar{display:flex;align-items:center;gap:20px;background:#22252c;padding:10px 16px;border-bottom:2px solid #333;flex-wrap:wrap}
+#bar span{font-size:14px}
+#bar b{color:#f4d35e}
+button{background:#2e323b;color:#eee;border:1px solid #444;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin:2px}
+button:hover{background:#3c4150}
+button:disabled{opacity:.4;cursor:default}
+#endTurnBtn{background:#3a7d44;font-weight:bold}
+#endTurnBtn:hover{background:#4a9d54}
+#main{display:flex;flex:1;overflow:hidden}
+#mapWrap{flex:1;overflow:auto;padding:10px;background:#0f1114}
+#map{display:grid;gap:2px;width:max-content}
+.tile{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border-radius:3px;transition:filter .1s}
+#side{width:260px;background:#22252c;padding:14px;overflow-y:auto;border-left:2px solid #333}
+#side h3{color:#f4d35e;margin-bottom:6px}
+#side h4{margin:10px 0 4px;color:#8ecae6}
+#side p{font-size:13px;margin:2px 0}
+#techModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;z-index:10}
+#techBox{background:#22252c;padding:20px;border-radius:10px;max-width:600px;width:90%}
+.techcard{background:#2e323b;padding:10px;border-radius:6px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="bar">
+<span>Ouro: <b id="gold">0</b></span>
+<span>Turno: <b id="turn">1</b></span>
+<span>Pesquisa: <b id="sciProgress">Nenhuma</b></span>
+<button onclick="openTech()">Árvore Tecnológica</button>
+<button id="endTurnBtn" onclick="endTurn()">Avançar Turno</button>
+</div>
+<div id="main">
+<div id="mapWrap"><div id="map"></div></div>
+<div id="side"></div>
+</div>
+<div id="techModal"><div id="techBox"><h2>Tecnologias</h2><div id="techList"></div><button onclick="closeTech()">Fechar</button></div></div>
+<script>
+const SIZE=15;
+const TILE_YIELD={plain:{f:2,p:1,g:0},forest:{f:1,p:2,g:0},mountain:{f:0,p:3,g:1},desert:{f:0,p:1,g:1},ocean:{f:2,p:0,g:1}};
+const BIOME_COLOR={plain:'#a9d18e',forest:'#2d6a4f',mountain:'#8d99ae',desert:'#e9c46a',ocean:'#457b9d'};
+const UNIT_TYPES={warrior:{name:'Guerreiro',icon:'⚔️',hp:10,atk:3,moves:1,cost:10,range:1},archer:{name:'Arqueiro',icon:'🏹',hp:8,atk:4,moves:1,cost:12,range:2},settler:{name:'Colonizador',icon:'🛠️',hp:5,atk:0,moves:1,cost:15,range:0}};
+const BUILDINGS={granary:{name:'Celeiro',cost:20,desc:'+50% crescimento'},market:{name:'Mercado',cost:25,desc:'+3 Ouro/turno'},library:{name:'Biblioteca',cost:25,desc:'+3 Ciência/turno'}};
+const TECHS=[{id:'agriculture',name:'Agricultura',cost:20,desc:'+1 Comida em Planícies'},{id:'mining',name:'Mineração',cost:30,desc:'+1 Produção em Montanhas'},{id:'wheel',name:'Roda',cost:40,desc:'+1 Movimento para unidades'},{id:'writing',name:'Escrita',cost:50,desc:'+2 Ciência por cidade'}];
+
+let map=[],units=[],cities=[],selected=null,turn=1;
+let gold=50,sciAccum=0,currentTech=null,researched=new Set(),nextId=1;
+
+function idx(x,y){return y*SIZE+x}
+function inb(x,y){return x>=0&&y>=0&&x<SIZE&&y<SIZE}
+
+function generateMap(){
+ map=new Array(SIZE*SIZE);
+ const seeds=[];
+ for(let i=0;i<9;i++)seeds.push({x:Math.random()*SIZE|0,y:Math.random()*SIZE|0,b:'plain'});
+ ['forest','mountain','desert','ocean'].forEach(b=>{for(let i=0;i<3;i++)seeds.push({x:Math.random()*SIZE|0,y:Math.random()*SIZE|0,b})});
+ for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+  let best=seeds[0],bd=1e9;
+  seeds.forEach(s=>{const d=(s.x-x)**2+(s.y-y)**2;if(d<bd){bd=d;best=s}});
+  map[idx(x,y)]={biome:best.b,fog:0};
+ }
+}
+function findStart(){
+ let tries=0;
+ while(tries++<500){
+  const x=Math.random()*SIZE|0,y=Math.random()*SIZE|0;
+  if(map[idx(x,y)].biome!=='ocean')return{x,y};
+ }
+ return{x:1,y:1};
+}
+function addUnit(type,owner,x,y){
+ units.push({id:nextId++,type,owner,x,y,hp:UNIT_TYPES[type].hp,movesLeft:UNIT_TYPES[type].moves+(researched.has('wheel')?1:0)});
+}
+function addCity(owner,x,y,name){
+ cities.push({id:nextId++,owner,x,y,name,pop:1,food:0,prod:0,hp:20,queue:[],buildings:[]});
+}
+function canFound(x,y){
+ return map[idx(x,y)].biome!=='ocean' && !cities.some(c=>Math.max(Math.abs(c.x-x),Math.abs(c.y-y))<3);
+}
+function foundCity(){
+ const u=selected.obj;
+ addCity('player',u.x,u.y,'Cidade '+(cities.filter(c=>c.owner==='player').length+1));
+ units=units.filter(o=>o!==u);
+ selected=null;
+ render();
+}
+function cityYield(c){
+ let f=2,p=1,g=1,sci=1;
+ for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+  if(dx===0&&dy===0)continue;
+  const x=c.x+dx,y=c.y+dy;
+  if(!inb(x,y))continue;
+  const t=map[idx(x,y)];
+  const yld=TILE_YIELD[t.biome];
+  let fb=yld.f,pb=yld.p;
+  if(t.biome==='plain'&&researched.has('agriculture'))fb+=1;
+  if(t.biome==='mountain'&&researched.has('mining'))pb+=1;
+  f+=fb;p+=pb;g+=yld.g;
+ }
+ if(researched.has('writing'))sci+=2;
+ if(c.buildings.includes('market'))g+=3;
+ if(c.buildings.includes('library'))sci+=3;
+ return{f,p,g,sci};
+}
+function processCity(c){
+ const y=cityYield(c);
+ c.food+=y.f;c.prod+=y.p;gold+=y.g;sciAccum+=y.sci;
+ let need=c.pop*10*(c.buildings.includes('granary')?0.67:1);
+ if(c.food>=need){c.food-=need;c.pop++;}
+ if(c.queue.length){
+  const item=c.queue[0];
+  const cost=item.kind==='unit'?UNIT_TYPES[item.id].cost:BUILDINGS[item.id].cost;
+  if(c.prod>=cost){
+   c.prod-=cost;
+   if(item.kind==='unit')addUnit(item.id,'player',c.x,c.y);
+   else c.buildings.push(item.id);
+   c.queue.shift();
+  }
+ }
+}
+function checkTech(){
+ if(currentTech){
+  const t=TECHS.find(t=>t.id===currentTech);
+  if(sciAccum>=t.cost){researched.add(t.id);sciAccum-=t.cost;currentTech=null;}
+ }
+}
+function doAttack(a,tu,tc){
+ const atk=UNIT_TYPES[a.type].atk;
+ if(tu){
+  tu.hp-=atk;
+  if(tu.hp<=0)units=units.filter(o=>o!==tu);
+  else if(UNIT_TYPES[a.type].range===1){a.hp-=Math.ceil(UNIT_TYPES[tu.type].atk*0.5);if(a.hp<=0)units=units.filter(o=>o!==a);}
+ } else if(tc){
+  tc.hp-=atk*2;
+  if(tc.hp<=0){
+   if(tc.owner==='player')cities=cities.filter(o=>o!==tc);
+   else{tc.owner='player';tc.hp=20;}
+  }
+ }
+}
+function onTileClick(x,y){
+ if(selected&&selected.kind==='unit'&&selected.obj.owner==='player'){
+  const u=selected.obj;
+  const dist=Math.max(Math.abs(u.x-x),Math.abs(u.y-y));
+  const tu=units.find(o=>o.x===x&&o.y===y&&o!==u);
+  const tc=cities.find(o=>o.x===x&&o.y===y);
+  const isEnemy=(tu&&tu.owner!=='player')||(tc&&tc.owner!=='player');
+  if(isEnemy&&dist<=UNIT_TYPES[u.type].range&&u.movesLeft>0&&UNIT_TYPES[u.type].atk>0){
+   doAttack(u,tu&&tu.owner!=='player'?tu:null,tc&&tc.owner!=='player'?tc:null);
+   u.movesLeft=0;render();return;
+  }
+  if(!tu&&dist<=u.movesLeft&&u.movesLeft>0&&map[idx(x,y)].fog>0&&map[idx(x,y)].biome!=='ocean'){
+   u.x=x;u.y=y;u.movesLeft-=dist;revealFog();selectTile(x,y);render();return;
+  }
+ }
+ selectTile(x,y);
+}
+function selectTile(x,y){
+ const u=units.find(o=>o.x===x&&o.y===y);
+ const c=cities.find(o=>o.x===x&&o.y===y);
+ if(u)selected={kind:'unit',obj:u};
+ else if(c)selected={kind:'city',obj:c};
+ else selected=null;
+ render();
+}
+function queueItem(cid,kind,id){
+ const c=cities.find(o=>o.id===cid);
+ c.queue.push({kind,id});
+ renderSide();
+}
+function revealAround(x,y,r){
+ for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+  const nx=x+dx,ny=y+dy;
+  if(inb(nx,ny))map[idx(nx,ny)].fog=2;
+ }
+}
+function revealFog(){
+ map.forEach(t=>{if(t.fog===2)t.fog=1});
+ units.filter(u=>u.owner==='player').forEach(u=>revealAround(u.x,u.y,2));
+ cities.filter(c=>c.owner==='player').forEach(c=>revealAround(c.x,c.y,2));
+}
+function aiTurn(){
+ if(turn%5===0){
+  const s=findStart();
+  addUnit('warrior','ai',s.x,s.y);
+ }
+ units.filter(u=>u.owner==='ai').forEach(u=>{
+  let target=null,bd=1e9;
+  units.filter(o=>o.owner==='player').forEach(o=>{const d=Math.max(Math.abs(o.x-u.x),Math.abs(o.y-u.y));if(d<bd){bd=d;target={x:o.x,y:o.y,ref:o,isCity:false};}});
+  cities.filter(o=>o.owner==='player').forEach(o=>{const d=Math.max(Math.abs(o.x-u.x),Math.abs(o.y-u.y));if(d<bd){bd=d;target={x:o.x,y:o.y,ref:o,isCity:true};}});
+  if(target&&bd<=6){
+   if(bd<=1){doAttack(u,target.isCity?null:target.ref,target.isCity?target.ref:null);}
+   else{
+    const dx=Math.sign(target.x-u.x),dy=Math.sign(target.y-u.y);
+    const nx=u.x+dx,ny=u.y+dy;
+    if(inb(nx,ny)&&map[idx(nx,ny)].biome!=='ocean'&&!units.some(o=>o.x===nx&&o.y===ny))
+     {u.x=nx;u.y=ny;}
+   }
+  } else {
+   const dx=(Math.random()*3|0)-1,dy=(Math.random()*3|0)-1;
+   const nx=u.x+dx,ny=u.y+dy;
+   if(inb(nx,ny)&&map[idx(nx,ny)].biome!=='ocean'&&!units.some(o=>o.x===nx&&o.y===ny))
+    {u.x=nx;u.y=ny;}
+  }
+ });
+ units=units.filter(u=>u.hp>0);
+}
+function endTurn(){
+ cities.filter(c=>c.owner==='player').forEach(processCity);
+ checkTech();
+ units.filter(u=>u.owner==='player').forEach(u=>u.movesLeft=UNIT_TYPES[u.type].moves+(researched.has('wheel')?1:0));
+ aiTurn();
+ revealFog();
+ turn++;
+ selected=null;
+ render();
+}
+function openTech(){
+ let h='';
+ TECHS.forEach(t=>{
+  const done=researched.has(t.id);
+  h+=`<div class="techcard"><b>${t.name}</b><p>${t.desc}</p><p>Custo: ${t.cost} Ciência</p>`;
+  if(done)h+='<i>Pesquisado ✔</i>';
+  else h+=`<button onclick="selectTech('${t.id}')" ${currentTech===t.id?'disabled':''}>${currentTech===t.id?'Em progresso':'Selecionar'}</button>`;
+  h+='</div>';
+ });
+ document.getElementById('techList').innerHTML=h;
+ document.getElementById('techModal').style.display='flex';
+}
+function selectTech(id){currentTech=id;sciAccum=0;document.getElementById('techModal').style.display='none';render();}
+function closeTech(){document.getElementById('techModal').style.display='none';}
+function renderMap(){
+ const el=document.getElementById('map');
+ el.innerHTML='';
+ el.style.gridTemplateColumns=`repeat(${SIZE},32px)`;
+ for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+  const t=map[idx(x,y)];
+  const div=document.createElement('div');
+  div.className='tile';
+  if(t.fog===0){div.style.background='#0a0a0c';}
+  else{
+   div.style.background=BIOME_COLOR[t.biome];
+   div.style.filter=t.fog===1?'brightness(0.45)':'none';
+   const u=units.find(o=>o.x===x&&o.y===y);
+   const c=cities.find(o=>o.x===x&&o.y===y);
+   if(c){div.textContent='🏙️';div.style.outline=c.owner==='player'?'2px solid #fff':'2px solid #d00';}
+   else if(u){div.textContent=UNIT_TYPES[u.type].icon;div.style.outline=u.owner==='player'?'2px solid #fff':'2px solid #d00';}
+  }
+  if(selected&&selected.obj.x===x&&selected.obj.y===y)div.style.boxShadow='0 0 0 3px #f4d35e inset';
+  div.onclick=()=>onTileClick(x,y);
+  el.appendChild(div);
+ }
+}
+function renderSide(){
+ const el=document.getElementById('side');
+ if(!selected){el.innerHTML='<p>Selecione uma unidade ou cidade no mapa.</p>';return;}
+ if(selected.kind==='unit'){
+  const u=selected.obj;
+  if(!units.includes(u)){selected=null;el.innerHTML='';return;}
+  const d=UNIT_TYPES[u.type];
+  let h=`<h3>${d.icon} ${d.name}</h3><p>Dono: ${u.owner==='player'?'Jogador':'Bárbaros'}</p><p>HP: ${u.hp}/${d.hp}</p><p>Ataque: ${d.atk}</p><p>Alcance: ${d.range}</p><p>Movimentos: ${u.movesLeft}</p>`;
+  if(u.type==='settler'&&u.owner==='player'&&canFound(u.x,u.y))h+=`<button onclick="foundCity()">Fundar Cidade</button>`;
+  el.innerHTML=h;
+ } else {
+  const c=selected.obj;
+  if(!cities.includes(c)){selected=null;el.innerHTML='';return;}
+  const y=cityYield(c);
+  let need=c.pop*10*(c.buildings.includes('granary')?0.67:1);
+  let h=`<h3>🏙️ ${c.name}</h3><p>Dono: ${c.owner==='player'?'Jogador':'Bárbaros'}</p><p>População: ${c.pop} | HP: ${c.hp}</p><p>Comida: ${c.food.toFixed(0)}/${need.toFixed(0)} (+${y.f})</p><p>Produção: ${c.prod.toFixed(0)} (+${y.p})</p><p>Ouro/turno: +${y.g}</p><p>Ciência/turno: +${y.sci}</p><p>Edifícios: ${c.buildings.length?c.buildings.map(b=>BUILDINGS[b].name).join(', '):'Nenhum'}</p>`;
+  if(c.owner==='player'){
+   h+='<h4>Construir Unidade</h4>';
+   Object.entries(UNIT_TYPES).forEach(([id,d])=>{h+=`<button onclick="queueItem(${c.id},'unit','${id}')">${d.name} (${d.cost}p)</button>`;});
+   h+='<h4>Construir Edifício</h4>';
+   Object.entries(BUILDINGS).forEach(([id,d])=>{if(!c.buildings.includes(id))h+=`<button onclick="queueItem(${c.id},'building','${id}')" title="${d.desc}">${d.name} (${d.cost}p)</button>`;});
+   h+='<h4>Fila de Construção</h4><p>'+(c.queue.length?c.queue.map(q=>q.kind==='unit'?UNIT_TYPES[q.id].name:BUILDINGS[q.id].name).join(' → '):'Vazia')+'</p>';
+  }
+  el.innerHTML=h;
+ }
+}
+function render(){
+ document.getElementById('gold').textContent=Math.floor(gold);
+ document.getElementById('turn').textContent=turn;
+ document.getElementById('sciProgress').textContent=currentTech?`${sciAccum}/${TECHS.find(t=>t.id===currentTech).cost} (${TECHS.find(t=>t.id===currentTech).name})`:`Banco: ${sciAccum}`;
+ renderMap();
+ renderSide();
+}
+function initGame(){
+ generateMap();
+ const s=findStart();
+ addUnit('settler','player',s.x,s.y);
+ let wx=s.x+1,wy=s.y;
+ if(!inb(wx,wy)||map[idx(wx,wy)].biome==='ocean'){wx=s.x;wy=s.y+1;}
+ addUnit('warrior','player',wx,wy);
+ revealFog();
+ render();
+}
+initGame();
+</script>
+</body>
+</html>
