@@ -3,17 +3,166 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Menu</title>
+    <title>Menu Principal</title>
+    <!-- Google Fonts para uma tipografia moderna -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Reset e Variáveis */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+      }
+
+      body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      /* Container Principal */
+      .menu-container {
+        width: 100%;
+        max-width: 480px;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 2.5rem;
+        letter-spacing: -0.05em;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        opacity: 0; /* Controlado pelo GSAP */
+      }
+
+      ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      li {
+        opacity: 0; /* Controlado pelo GSAP */
+        transform: translateY(20px);
+      }
+
+      /* Estilização dos Links (Cards) */
+      .menu-item {
+        display: block;
+        text-decoration: none;
+        color: var(--text-main);
+        background-color: var(--card-bg);
+        padding: 1.25rem 1.5rem;
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: border-color 0.3s ease, background-color 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Efeito Hover Individual */
+      .menu-item:hover {
+        border-color: rgba(56, 189, 248, 0.4);
+        background-color: #243249;
+      }
+
+      /* Item desativado/To Add */
+      .menu-item.disabled {
+        color: var(--text-muted);
+        opacity: 0.6;
+        border-style: dashed;
+      }
+      .menu-item.disabled:hover {
+        border-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--card-bg);
+        cursor: not-allowed;
+      }
+    </style>
   </head>
   <body>
-    <center>
-      <h1>Menu Principal</h1>
-      <ul>
-        <li><a href="sub-pages/budget_simulator.html">Budget Simulator</a></li>
-        <li><a href="sub-pages/gargantua.html">Gargantua Simulator</a></li>
-        <li><a href="sub-pages/quitina.html">Quitina</a></li>
-        <li><a href="#">To Add</a></li>
+
+    <div class="menu-container">
+      <h1 id="menu-title">Menu Principal</h1>
+      <ul id="menu-list">
+        <li><a class="menu-item" href="sub-pages/budget_simulator.html">Budget Simulator</a></li>
+        <li><a class="menu-item" href="sub-pages/gargantua.html">Gargantua Simulator</a></li>
+        <li><a class="menu-item" href="sub-pages/quitina.html">Quitina</a></li>
+        <li><a class="menu-item" href="sub-pages/civ.html">CIV</a></li>
+        <li><a class="menu-item disabled" href="#">To Add</a></li>
       </ul>
-    </center>
+    </div>
+
+    <!-- Scripts do GSAP via CDN -->
+    <script src="https://cloudflare.com"></script>
+    <script>
+      // Executa as animações assim que o DOM estiver carregado
+      window.addEventListener('DOMContentLoaded', () => {
+        
+        // Criar uma Timeline para sequenciar os movimentos
+        const tl = gsap.timeline();
+
+        // 1. Animação do Título
+        tl.to("#menu-title", {
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: "power4.out"
+        });
+
+        // 2. Animação dos itens da lista em efeito cascata (stagger)
+        tl.to("#menu-list li", {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.15, // Intervalo entre a entrada de cada item
+          ease: "power3.out"
+        }, "-=0.6"); // Inicia um pouco antes do título terminar
+
+        // 3. Efeito interativo com GSAP no Hover de cada botão
+        const items = document.querySelectorAll('.menu-item:not(.disabled)');
+        
+        items.forEach(item => {
+          item.addEventListener('mouseenter', () => {
+            gsap.to(item, {
+              scale: 1.03,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          });
+
+          item.addEventListener('mouseleave', () => {
+            gsap.to(item, {
+              scale: 1,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          });
+        });
+
+      });
+    </script>
   </body>
 </html>
