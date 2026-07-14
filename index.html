@@ -17,15 +17,15 @@
         box-sizing: border-box;
       }
       :root {
-        --bg-color: #0f1a14;
-        --bg-color-2: #0a120d;
-        --card-bg: #16261d;
-        --card-bg-hover: #1c3025;
+        --bg-color: #0f1a17;
+        --bg-color-2: #0a1210;
+        --card-bg: #16261f;
+        --card-bg-hover: #1c3229;
         --text-main: #f1fdf7;
         --text-muted: #8fac9c;
-        --accent: #34d399;
-        --accent-2: #10b981;
-        --accent-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        --accent: #44c4a1;
+        --accent-2: #3ea69b;
+        --accent-gradient: linear-gradient(135deg, #44c4a1 0%, #3ea69b 100%);
       }
 
       html, body {
@@ -44,17 +44,25 @@
         position: relative;
       }
 
-      /* Glow de fundo animado pelo GSAP */
-      .glow {
-        position: absolute;
-        width: 600px;
-        height: 600px;
+      /* Bolas de luz ambiente - "olham" para o cursor */
+      .orb {
+        position: fixed;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(52,211,153,0.15) 0%, rgba(52,211,153,0) 70%);
-        top: -200px;
-        left: -200px;
         pointer-events: none;
-        filter: blur(10px);
+        background: radial-gradient(circle at 50% 50%, rgba(68,196,161,0.10) 0%, rgba(68,196,161,0) 72%);
+        filter: blur(2px);
+        opacity: 0;
+      }
+
+      .orb-pupil {
+        position: absolute;
+        width: 34%;
+        height: 34%;
+        top: 33%;
+        left: 33%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(68,196,161,0.95) 0%, rgba(68,196,161,0.15) 65%, transparent 75%);
+        filter: blur(1px);
       }
 
       .menu-container {
@@ -152,11 +160,11 @@
       .menu-item:not(.disabled):hover .folder-front {
         transform: rotateX(-35deg) translateY(-3px);
         background: var(--card-bg-hover);
-        box-shadow: 0 10px 18px -6px rgba(0,0,0,0.5), 0 0 0 1px rgba(52,211,153,0.25);
+        box-shadow: 0 10px 18px -6px rgba(0,0,0,0.5), 0 0 0 1px rgba(68,196,161,0.25);
       }
 
       .menu-item:not(.disabled):hover .folder-back {
-        box-shadow: 0 0 0 1px rgba(52,211,153,0.15);
+        box-shadow: 0 0 0 1px rgba(68,196,161,0.15);
       }
 
       .menu-item:not(.disabled):hover .folder-back::after {
@@ -165,7 +173,7 @@
         inset: 6px 8px;
         top: 8px;
         border-radius: 3px;
-        background: linear-gradient(160deg, rgba(52,211,153,0.16), transparent 70%);
+        background: linear-gradient(160deg, rgba(68,196,161,0.16), transparent 70%);
       }
 
       .folder-label {
@@ -187,6 +195,83 @@
         border-style: dashed;
       }
 
+      /* Pasta "Em Construção" */
+      .menu-item.construction .folder-front {
+        background: var(--card-bg);
+        border-color: rgba(251,191,36,0.35);
+        overflow: hidden;
+      }
+
+      .menu-item.construction .folder-front::after {
+        content: "";
+        position: absolute;
+        left: -20%;
+        right: -20%;
+        top: 40%;
+        height: 13px;
+        transform: rotate(-9deg);
+        background: repeating-linear-gradient(
+          135deg,
+          #fbbf24,
+          #fbbf24 9px,
+          #1a1a1a 9px,
+          #1a1a1a 18px
+        );
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      }
+
+      .menu-item.construction .folder-back {
+        border-color: rgba(251,191,36,0.2);
+      }
+
+      .menu-item:not(.disabled).construction:hover .folder-front {
+        background: var(--card-bg-hover);
+        box-shadow: 0 10px 18px -6px rgba(0,0,0,0.5), 0 0 0 1px rgba(251,191,36,0.3);
+      }
+
+      /* Cone de trânsito */
+      .cone {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 26px;
+        height: 22px;
+        z-index: 2;
+        filter: drop-shadow(0 3px 3px rgba(0,0,0,0.45));
+      }
+
+      .cone-body {
+        position: absolute;
+        inset: 0;
+        clip-path: polygon(50% 0%, 82% 100%, 18% 100%);
+        background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+      }
+
+      .cone-stripe {
+        position: absolute;
+        left: 8%;
+        right: 8%;
+        top: 58%;
+        height: 22%;
+        clip-path: polygon(20% 0%, 80% 0%, 92% 100%, 8% 100%);
+        background: #f1f5f9;
+      }
+
+      .cone-base {
+        position: absolute;
+        left: -15%;
+        right: -15%;
+        bottom: -18%;
+        height: 22%;
+        background: #7c2d12;
+        border-radius: 2px;
+      }
+
+      .menu-item.construction .folder-label {
+        color: #fbbf24;
+      }
+
       @media (max-width: 480px) {
         ul { grid-template-columns: repeat(2, 1fr); }
       }
@@ -194,7 +279,24 @@
   </head>
   <body>
 
-    <div class="glow" id="glow"></div>
+    <div class="orb" style="width:480px;height:480px;top:-8%;left:-10%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:60px;height:60px;top:10%;left:22%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:340px;height:340px;top:4%;right:-8%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:40px;height:40px;top:28%;right:20%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:520px;height:520px;bottom:-14%;left:-8%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:90px;height:90px;bottom:30%;left:30%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:260px;height:260px;bottom:-6%;right:2%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:50px;height:50px;bottom:16%;right:34%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:180px;height:180px;top:38%;left:-8%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:35px;height:35px;top:6%;left:45%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:130px;height:130px;top:60%;right:-4%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:75px;height:75px;bottom:4%;left:6%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:400px;height:400px;top:60%;left:40%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:25px;height:25px;top:18%;right:42%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:210px;height:210px;top:2%;right:30%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:55px;height:55px;bottom:42%;right:14%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:150px;height:150px;bottom:2%;left:44%;"><span class="orb-pupil"></span></div>
+    <div class="orb" style="width:30px;height:30px;top:48%;left:16%;"><span class="orb-pupil"></span></div>
 
     <div class="menu-container">
       <h1 id="menu-title">Menu Principal</h1>
@@ -220,9 +322,17 @@
           <span class="folder-icon"><span class="folder-back"></span><span class="folder-front"></span></span>
           <span class="folder-label">.TXT Viewer</span>
         </a></li>
-        <li><a class="menu-item disabled" href="#">
-          <span class="folder-icon"><span class="folder-back"></span><span class="folder-front"></span></span>
-          <span class="folder-label">To Add</span>
+        <li><a class="menu-item disabled construction" href="#">
+          <span class="folder-icon">
+            <span class="cone">
+              <span class="cone-base"></span>
+              <span class="cone-body"></span>
+              <span class="cone-stripe"></span>
+            </span>
+            <span class="folder-back"></span>
+            <span class="folder-front"></span>
+          </span>
+          <span class="folder-label">Em Construção</span>
         </a></li>
       </ul>
     </div>
@@ -235,9 +345,10 @@
         // Timeline de entrada
         const tl = gsap.timeline();
 
-        tl.to("#glow", {
+        tl.to(".orb", {
           opacity: 1,
           duration: 1.5,
+          stagger: 0.1,
           ease: "power2.out"
         })
         .to("#menu-title", {
@@ -262,16 +373,30 @@
         // Estado inicial (antes de a timeline correr)
         gsap.set("#menu-title", { y: -20 });
         gsap.set("#menu-list li", { y: 20 });
-        gsap.set("#glow", { opacity: 0 });
+        gsap.set(".orb", { opacity: 0 });
 
-        // Glow segue o rato lentamente (parallax subtil)
-        const glow = document.getElementById("glow");
-        const xTo = gsap.quickTo(glow, "x", { duration: 1.2, ease: "power3.out" });
-        const yTo = gsap.quickTo(glow, "y", { duration: 1.2, ease: "power3.out" });
+        // Cada bola "olha" para o cursor: a pupila desloca-se na direção do rato
+        const orbs = document.querySelectorAll(".orb");
+        const pupilMovers = Array.from(orbs).map(orb => {
+          const pupil = orb.querySelector(".orb-pupil");
+          return {
+            orb,
+            pupil,
+            xTo: gsap.quickTo(pupil, "x", { duration: 0.6, ease: "power3.out" }),
+            yTo: gsap.quickTo(pupil, "y", { duration: 0.6, ease: "power3.out" })
+          };
+        });
 
         window.addEventListener('mousemove', (e) => {
-          xTo(e.clientX - 300);
-          yTo(e.clientY - 300);
+          pupilMovers.forEach(({ orb, xTo, yTo }) => {
+            const rect = orb.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+            const reach = rect.width * 0.16; // o quanto a pupila se desloca dentro da bola
+            xTo(Math.cos(angle) * reach);
+            yTo(Math.sin(angle) * reach);
+          });
         });
 
         // Hover nos cards: scale + brilho a seguir o cursor
