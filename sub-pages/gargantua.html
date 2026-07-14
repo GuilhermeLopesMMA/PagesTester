@@ -103,7 +103,7 @@ const R_DISK_IN  = R_ISCO * 0.62; // disco começa perto (licença artística, e
 const R_DISK_OUT = 17.0;
 
 const IS_MOBILE   = matchMedia('(max-width: 700px)').matches;
-const DISK_COUNT  = IS_MOBILE ? 28000 : 90000;
+const DISK_COUNT  = IS_MOBILE ? 25000 : 60000;
 const STAR_COUNT  = IS_MOBILE ? 6000  : 16000;
 const JET_COUNT   = IS_MOBILE ? 3500  : 10000;
 
@@ -112,13 +112,13 @@ const JET_COUNT   = IS_MOBILE ? 3500  : 10000;
 // ─────────────────────────────────────────────────────────────
 const scene  = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 2000);
-camera.position.set(0, 5, 26);
+camera.position.set(0, 6, 34);
 
 const renderer = new THREE.WebGLRenderer({ antialias: !IS_MOBILE, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.85;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -174,7 +174,7 @@ const LensingShader = {
 
             // Anel de fotões (borda brilhante da sombra)
             float ring = exp(-pow((r - rs * 1.04) / (rs * 0.05), 2.0));
-            col += vec3(1.0, 0.74, 0.40) * ring * 0.45 * uStrength;
+            col += vec3(1.0, 0.74, 0.40) * ring * 0.30 * uStrength;
 
             gl_FragColor = vec4(col, 1.0);
         }`
@@ -186,7 +186,7 @@ composer.addPass(new RenderPass(scene, camera));
 const lensPass = new ShaderPass(LensingShader);
 composer.addPass(lensPass);
 
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.55, 0.6, 0.12);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.65, 0.45, 0.75);
 composer.addPass(bloom);
 
 // ─────────────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ const coronaMat = new THREE.ShaderMaterial({
         void main() {
             float flicker = 0.82 + 0.18 * sin(time * 5.3);
             vec3  color = mix(vec3(1.0, 0.45, 0.05), vec3(1.0, 0.9, 0.6), vRim * 0.6);
-            gl_FragColor = vec4(color, vRim * 0.45 * flicker);
+            gl_FragColor = vec4(color, vRim * 0.28 * flicker);
         }`,
     transparent: true, side: THREE.BackSide,
     blending: THREE.AdditiveBlending, depthWrite: false
@@ -290,7 +290,7 @@ const DISK_VERT = /* glsl */`
         float g = sqrt(max(1.0 - rs / radius, 0.02));
 
         // "Beaming" relativista: brilho aparente ∝ D³ (assimetria do disco)
-        float boost = clamp(pow(D * g, 3.0), 0.12, 4.0);
+        float boost = clamp(pow(D * g, 3.0), 0.15, 2.2);
 
         // Gradiente de temperatura (mais quente e branco perto do interior)
         float heat = clamp(1.0 - (radius - rIn) / (rOut - rIn), 0.0, 1.0);
@@ -303,13 +303,13 @@ const DISK_VERT = /* glsl */`
         if (t > 0.0) col = mix(col, vec3(0.55, 0.78, 1.00), t * 0.75);
         else         col = mix(col, vec3(1.00, 0.12, 0.02), -t * 0.75);
 
-        vCol   = col * boost;
-        vAlpha = clamp((0.25 + heat * 0.45) * boost, 0.05, 1.0);
+        vCol   = col * boost * 0.42;
+        vAlpha = clamp((0.05 + heat * 0.14) * boost, 0.015, 0.40);
 
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
         gl_Position  = projectionMatrix * mv;
         float depth  = max(-mv.z, 0.001);                     // evita gl_PointSize negativo
-        gl_PointSize = clamp((1.5 + heat * 2.6) * (330.0 / depth), 1.0, 40.0);
+        gl_PointSize = clamp((1.0 + heat * 1.6) * (110.0 / depth), 1.0, 7.0);
     }
 `;
 
@@ -383,7 +383,7 @@ scene.add(disk);
     const ring = new THREE.Mesh(
         new THREE.TorusGeometry(R_PHOTON, 0.04, 8, 256),
         new THREE.MeshBasicMaterial({
-            color: 0xfff2dd, transparent: true, opacity: 0.85,
+            color: 0xfff2dd, transparent: true, opacity: 0.45,
             blending: THREE.AdditiveBlending, depthWrite: false
         })
     );
