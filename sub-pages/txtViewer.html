@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TXT Viewer</title>
+<style>
+  :root{
+    --bg:#1e1e1e; --panel:#252526; --text:#d4d4d4; --accent:#4ec9b0;
+    --border:#3c3c3c; --highlight:#5a4a1a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column;
+  }
+  header{
+    background:var(--panel); border-bottom:1px solid var(--border);
+    padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  header h1{font-size:15px; margin:0; color:var(--accent); font-weight:600; margin-right:8px;}
+  button, input[type=text], input[type=number]{
+    background:#2d2d2d; color:var(--text); border:1px solid var(--border);
+    border-radius:5px; padding:6px 10px; font-size:13px;
+  }
+  button{cursor:pointer;}
+  button:hover{background:#3a3a3a;}
+  button.active{background:var(--accent); color:#111;}
+  #dropzone{
+    flex:1; overflow:auto; position:relative;
+  }
+  #placeholder{
+    height:100%; display:flex; align-items:center; justify-content:center;
+    color:#777; font-size:15px; border:2px dashed var(--border); margin:14px; border-radius:10px;
+  }
+  #dropzone.drag #placeholder{border-color:var(--accent); color:var(--accent);}
+  #content{
+    display:none; height:100%; overflow:auto; padding:0;
+  }
+  table{border-collapse:collapse; width:100%; font-family:Consolas,Menlo,monospace;}
+  td.lineno{
+    color:#6a6a6a; text-align:right; padding:0 10px; user-select:none;
+    border-right:1px solid var(--border); vertical-align:top; background:var(--panel);
+    position:sticky; left:0;
+  }
+  td.linetext{
+    padding:0 10px; white-space:pre; vertical-align:top;
+  }
+  tr:hover td{background:#2a2d2e;}
+  mark{background:var(--highlight); color:#fff; border-radius:2px;}
+  #stats{color:#888; font-size:12px; margin-left:auto;}
+  input#fname{max-width:220px;}
+  #wrapToggle.active{background:var(--accent); color:#111;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📄 TXT Viewer</h1>
+  <button id="openBtn">Open file…</button>
+  <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none">
+  <input type="text" id="search" placeholder="Search…" style="display:none">
+  <button id="wrapToggle" style="display:none">Wrap</button>
+  <button id="fontMinus" style="display:none">A-</button>
+  <button id="fontPlus" style="display:none">A+</button>
+  <span id="stats"></span>
+</header>
+
+<div id="dropzone">
+  <div id="placeholder">Drag &amp; drop a .txt file here, or click "Open file…"</div>
+  <div id="content"><table id="table"></table></div>
+</div>
+
+<script>
+const openBtn = document.getElementById('openBtn');
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const placeholder = document.getElementById('placeholder');
+const content = document.getElementById('content');
+const table = document.getElementById('table');
+const search = document.getElementById('search');
+const stats = document.getElementById('stats');
+const wrapToggle = document.getElementById('wrapToggle');
+const fontMinus = document.getElementById('fontMinus');
+const fontPlus = document.getElementById('fontPlus');
+
+let rawLines = [];
+let fontSize = 13;
+
+openBtn.onclick = () => fileInput.click();
+fileInput.onchange = e => { if(e.target.files[0]) loadFile(e.target.files[0]); };
+
+['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault(); dropzone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+}));
+dropzone.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+function loadFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    rawLines = reader.result.split(/\r\n|\r|\n/);
+    render(rawLines);
+    placeholder.style.display = 'none';
+    content.style.display = 'block';
+    search.style.display = 'inline-block';
+    wrapToggle.style.display = 'inline-block';
+    fontMinus.style.display = 'inline-block';
+    fontPlus.style.display = 'inline-block';
+    stats.textContent = `${file.name} · ${rawLines.length} lines · ${(file.size/1024).toFixed(1)} KB`;
+  };
+  reader.readAsText(file);
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function render(lines, query){
+  table.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  lines.forEach((line, i) => {
+    let text = escapeHtml(line);
+    if (query){
+      const re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+      text = text.replace(re, m => `<mark>${m}</mark>`);
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="lineno">${i+1}</td><td class="linetext">${text || '&nbsp;'}</td>`;
+    frag.appendChild(tr);
+  });
+  table.appendChild(frag);
+  table.style.fontSize = fontSize + 'px';
+}
+
+search.addEventListener('input', () => {
+  const q = search.value;
+  render(rawLines, q);
+  if (q){
+    const matches = rawLines.filter(l => l.toLowerCase().includes(q.toLowerCase())).length;
+    stats.textContent = `${matches} lines match "${q}"`;
+  }
+});
+
+wrapToggle.onclick = () => {
+  wrapToggle.classList.toggle('active');
+  document.querySelectorAll('td.linetext').forEach(td => {
+    td.style.whiteSpace = wrapToggle.classList.contains('active') ? 'pre-wrap' : 'pre';
+  });
+};
+
+fontPlus.onclick = () => { fontSize = Math.min(fontSize+2, 32); table.style.fontSize = fontSize+'px'; };
+fontMinus.onclick = () => { fontSize = Math.max(fontSize-2, 8); table.style.fontSize = fontSize+'px'; };
+</script>
+
+</body>
+</html>
