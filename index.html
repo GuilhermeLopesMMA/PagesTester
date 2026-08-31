@@ -44,6 +44,60 @@
         position: relative;
       }
 
+      /* Fundo de estrelas a piscar devagar */
+      .star-field {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 0;
+      }
+
+      .star {
+        position: absolute;
+        border-radius: 50%;
+        background: var(--text-main);
+        opacity: 0.1;
+        animation-name: star-twinkle;
+        animation-timing-function: ease-in-out;
+        animation-iteration-count: infinite;
+      }
+
+      @keyframes star-twinkle {
+        0%, 100% { opacity: 0.1; transform: scale(0.8); }
+        50% { opacity: 0.85; transform: scale(1.15); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .star {
+          animation: none;
+          opacity: 0.3;
+        }
+      }
+
+      /* Ecrã de warp: tudo é "sugado" para um ponto antes do menu aparecer */
+      .warp-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        pointer-events: none;
+        background: radial-gradient(circle at 50% 50%, #0a1512 0%, #000000 100%);
+      }
+
+      .warp-core {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 20px 6px rgba(68,196,161,0.9), 0 0 60px 20px rgba(68,196,161,0.5);
+        z-index: 10001;
+        pointer-events: none;
+        opacity: 0;
+      }
+
       /* Bolas de luz ambiente - "olham" para o cursor */
       .orb {
         position: fixed;
@@ -114,6 +168,7 @@
         font-size: 0.85rem;
         position: relative;
         padding-top: 0.5rem;
+        perspective: 700px;
       }
 
       /* Folder icon built from stacked CSS shapes */
@@ -121,6 +176,7 @@
         position: relative;
         width: 64px;
         height: 48px;
+        transform-style: preserve-3d;
       }
 
       .folder-back {
@@ -272,12 +328,107 @@
         color: #fbbf24;
       }
 
+      /* Cursor personalizado: mira de HUD no verde da marca */
+      @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+        body,
+        a {
+          cursor: none;
+        }
+
+        .cursor-hud {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 40px;
+          height: 40px;
+          pointer-events: none;
+          z-index: 9999;
+          opacity: 0;
+          will-change: transform;
+          transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
+        }
+
+        .cursor-hud svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          overflow: visible;
+        }
+
+        .cursor-hud.visible {
+          opacity: 1;
+        }
+
+        .cursor-hud .hud-outer {
+          fill: none;
+          stroke: var(--accent-2);
+          transform-box: fill-box;
+          transform-origin: 50% 50%;
+          transition: stroke 0.25s ease;
+        }
+
+        .cursor-hud .hud-ring {
+          fill: none;
+          stroke: var(--accent);
+          transition: stroke 0.25s ease;
+        }
+
+        .cursor-hud .hud-tick {
+          stroke: var(--accent);
+          transform-box: fill-box;
+          transform-origin: 50% 50%;
+          transition: stroke 0.25s ease, transform 0.25s ease;
+        }
+
+        .cursor-hud .hud-dot {
+          fill: var(--accent);
+          transform-box: fill-box;
+          transform-origin: 50% 50%;
+          transition: fill 0.25s ease, transform 0.25s ease;
+        }
+
+        .cursor-hud.locked {
+          width: 48px;
+          height: 48px;
+        }
+
+        .cursor-hud.locked .hud-tick {
+          transform: scale(1.4);
+        }
+
+        .cursor-hud.locked .hud-dot {
+          transform: scale(1.5);
+        }
+
+        .cursor-hud.blocked {
+          width: 32px;
+          height: 32px;
+        }
+
+        .cursor-hud.blocked .hud-outer,
+        .cursor-hud.blocked .hud-ring,
+        .cursor-hud.blocked .hud-tick {
+          stroke: #fbbf24;
+        }
+
+        .cursor-hud.blocked .hud-dot {
+          fill: #fbbf24;
+        }
+
+        .cursor-hud.blocked .hud-tick {
+          transform: scale(0.5);
+        }
+      }
+
       @media (max-width: 480px) {
         ul { grid-template-columns: repeat(2, 1fr); }
       }
     </style>
   </head>
   <body>
+
+    <div class="warp-overlay" aria-hidden="true"></div>
+    <div class="warp-core" aria-hidden="true"></div>
 
     <div class="orb" style="width:480px;height:480px;top:-8%;left:-10%;"><span class="orb-pupil"></span></div>
     <div class="orb" style="width:60px;height:60px;top:10%;left:22%;"><span class="orb-pupil"></span></div>
@@ -300,7 +451,7 @@
 
     <div class="menu-container">
       <h1 id="menu-title">Menu Principal</h1>
-      <p class="subtitle" id="menu-subtitle">Escolhe um projeto para abrir</p>
+      <p class="subtitle" id="menu-subtitle">Escolhe um projeto</p>
       <ul id="menu-list">
         <li><a class="menu-item" href="sub-pages/budget_simulator.html">
           <span class="folder-icon"><span class="folder-back"></span><span class="folder-front"></span></span>
@@ -342,67 +493,168 @@
     <script>
       window.addEventListener('DOMContentLoaded', () => {
 
-        // Timeline de entrada
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const pointerFine = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches;
+
+        // Subtítulo dinâmico consoante a hora do dia
+        const hour = new Date().getHours();
+        let greeting;
+        if (hour >= 5 && hour < 12) {
+          greeting = "Bom dia, escolhe um projeto";
+        } else if (hour >= 12 && hour < 19) {
+          greeting = "Boa tarde, escolhe um projeto";
+        } else if (hour >= 19 && hour < 23) {
+          greeting = "Boa noite, escolhe um projeto";
+        } else {
+          greeting = "Ainda acordado a esta hora? Escolhe um projeto";
+        }
+        document.getElementById('menu-subtitle').textContent = greeting;
+
+        // Fundo de estrelas a piscar devagar
+        const starField = document.createElement('div');
+        starField.className = 'star-field';
+        starField.setAttribute('aria-hidden', 'true');
+        const starsFrag = document.createDocumentFragment();
+        for (let i = 0; i < 80; i++) {
+          const star = document.createElement('span');
+          star.className = 'star';
+          const size = (Math.random() * 1.6 + 0.6).toFixed(2);
+          star.style.width = size + 'px';
+          star.style.height = size + 'px';
+          star.style.top = (Math.random() * 100).toFixed(2) + '%';
+          star.style.left = (Math.random() * 100).toFixed(2) + '%';
+          star.style.animationDuration = (2.5 + Math.random() * 4).toFixed(2) + 's';
+          star.style.animationDelay = (Math.random() * 5).toFixed(2) + 's';
+          starsFrag.appendChild(star);
+        }
+        starField.appendChild(starsFrag);
+        document.body.prepend(starField);
+
+        // Cada órbita ambiente presente na página
+        const orbs = document.querySelectorAll(".orb");
+
+        // Timeline de entrada, com warp opcional antes do menu aparecer
         const tl = gsap.timeline();
 
+        if (!reducedMotion) {
+          tl.to(".warp-core", {
+              scale: 1,
+              opacity: 1,
+              duration: 0.35,
+              ease: "power2.out"
+            })
+            .to(".warp-overlay", {
+              scale: 0,
+              duration: 0.7,
+              ease: "power4.in"
+            }, "+=0.05")
+            .to(".warp-core", {
+              scale: 2.4,
+              opacity: 0,
+              duration: 0.3,
+              ease: "power2.in"
+            }, "<+=0.35")
+            .set(".warp-overlay", { display: "none" });
+        } else {
+          gsap.set([".warp-overlay", ".warp-core"], { display: "none" });
+        }
+
         tl.to(".orb", {
-          opacity: 1,
-          duration: 1.5,
-          stagger: 0.1,
-          ease: "power2.out"
-        })
-        .to("#menu-title", {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          ease: "power4.out"
-        }, "-=1.2")
-        .to("#menu-subtitle", {
-          opacity: 1,
-          duration: 0.8,
-          ease: "power2.out"
-        }, "-=0.6")
-        .to("#menu-list li", {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          stagger: 0.12,
-          ease: "power3.out"
-        }, "-=0.4");
+            opacity: 1,
+            duration: 1.5,
+            stagger: 0.1,
+            ease: "power2.out"
+          }, reducedMotion ? undefined : "-=0.1")
+          .to("#menu-title", {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: "power4.out"
+          }, "-=1.2")
+          .to("#menu-subtitle", {
+            opacity: 1,
+            duration: 0.8,
+            ease: "power2.out"
+          }, "-=0.6")
+          .to("#menu-list li", {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            stagger: 0.12,
+            ease: "power3.out"
+          }, "-=0.4");
 
         // Estado inicial (antes de a timeline correr)
         gsap.set("#menu-title", { y: -20 });
         gsap.set("#menu-list li", { y: 20 });
         gsap.set(".orb", { opacity: 0 });
+        gsap.set(".warp-core", { xPercent: -50, yPercent: -50, scale: 0 });
 
-        // Cada bola "olha" para o cursor: a pupila desloca-se na direção do rato
-        const orbs = document.querySelectorAll(".orb");
-        const pupilMovers = Array.from(orbs).map(orb => {
+        // Assim que a entrada acaba, as órbitas ganham uma respiração lenta e contínua
+        function startOrbBreathing() {
+          if (reducedMotion) return;
+          orbs.forEach((orb, i) => {
+            gsap.to(orb, {
+              opacity: 0.78,
+              duration: 2.6 + Math.random() * 2,
+              ease: "sine.inOut",
+              yoyo: true,
+              repeat: -1,
+              delay: i * 0.15
+            });
+          });
+        }
+        tl.eventCallback("onComplete", startOrbBreathing);
+
+        // Cada bola "olha" para o cursor, reage em paralaxe (a profundidades diferentes) e "acorda" quando o rato se aproxima
+        const orbData = Array.from(orbs).map(orb => {
           const pupil = orb.querySelector(".orb-pupil");
+          const width = parseFloat(orb.style.width) || 100;
+          const depth = 1 - Math.min(width, 500) / 500; // 0 = fundo, ~1 = perto
           return {
             orb,
-            pupil,
-            xTo: gsap.quickTo(pupil, "x", { duration: 0.6, ease: "power3.out" }),
-            yTo: gsap.quickTo(pupil, "y", { duration: 0.6, ease: "power3.out" })
+            pupilXTo: gsap.quickTo(pupil, "x", { duration: 0.6, ease: "power3.out" }),
+            pupilYTo: gsap.quickTo(pupil, "y", { duration: 0.6, ease: "power3.out" }),
+            pupilScaleTo: gsap.quickTo(pupil, "scale", { duration: 0.4, ease: "power2.out" }),
+            orbXTo: gsap.quickTo(orb, "x", { duration: 1.1, ease: "power2.out" }),
+            orbYTo: gsap.quickTo(orb, "y", { duration: 1.1, ease: "power2.out" }),
+            orbScaleTo: gsap.quickTo(orb, "scale", { duration: 0.5, ease: "power2.out" }),
+            parallax: 10 + depth * 22
           };
         });
 
-        window.addEventListener('mousemove', (e) => {
-          pupilMovers.forEach(({ orb, xTo, yTo }) => {
+        if (!reducedMotion) window.addEventListener('mousemove', (e) => {
+          const nx = (e.clientX / window.innerWidth  - 0.5) * 2;
+          const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+
+          orbData.forEach(({ orb, pupilXTo, pupilYTo, pupilScaleTo, orbXTo, orbYTo, orbScaleTo, parallax }) => {
             const rect = orb.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
             const cy = rect.top + rect.height / 2;
+
             const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
             const reach = rect.width * 0.16; // o quanto a pupila se desloca dentro da bola
-            xTo(Math.cos(angle) * reach);
-            yTo(Math.sin(angle) * reach);
+            pupilXTo(Math.cos(angle) * reach);
+            pupilYTo(Math.sin(angle) * reach);
+
+            orbXTo(nx * parallax);
+            orbYTo(ny * parallax);
+
+            const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+            const proximity = Math.max(0, 1 - dist / 260);
+            orbScaleTo(1 + proximity * 0.12);
+            pupilScaleTo(1 + proximity * 0.4);
           });
         });
 
-        // Hover nos cards: scale + brilho a seguir o cursor
+        // Hover nos cards: eleva, inclina em 3D consoante a posição do rato dentro da pasta
         const items = document.querySelectorAll('.menu-item:not(.disabled)');
 
         items.forEach(item => {
+          const icon = item.querySelector('.folder-icon');
+          const tiltX = gsap.quickTo(icon, "rotationX", { duration: 0.4, ease: "power2.out" });
+          const tiltY = gsap.quickTo(icon, "rotationY", { duration: 0.4, ease: "power2.out" });
+
           item.addEventListener('mouseenter', () => {
             gsap.to(item, {
               y: -3,
@@ -411,14 +663,82 @@
             });
           });
 
+          if (!reducedMotion) item.addEventListener('mousemove', (e) => {
+            const rect = item.getBoundingClientRect();
+            const px = (e.clientX - rect.left) / rect.width  - 0.5;
+            const py = (e.clientY - rect.top)  / rect.height - 0.5;
+            tiltX(py * -16);
+            tiltY(px * 16);
+          });
+
           item.addEventListener('mouseleave', () => {
             gsap.to(item, {
               y: 0,
               duration: 0.3,
               ease: "power2.out"
             });
+            tiltX(0);
+            tiltY(0);
           });
         });
+
+        // Cursor personalizado: mira de HUD que segue o rato
+        if (pointerFine) {
+          const cursorHud = document.createElement('div');
+          cursorHud.className = 'cursor-hud';
+          cursorHud.setAttribute('aria-hidden', 'true');
+          cursorHud.innerHTML = `
+            <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+              <circle class="hud-outer" cx="20" cy="20" r="17" stroke-width="1" stroke-dasharray="3 7" stroke-linecap="round"/>
+              <circle class="hud-ring" cx="20" cy="20" r="10" stroke-width="1"/>
+              <line class="hud-tick" x1="20" y1="1"  x2="20" y2="6"  stroke-width="1.5" stroke-linecap="round"/>
+              <line class="hud-tick" x1="20" y1="34" x2="20" y2="39" stroke-width="1.5" stroke-linecap="round"/>
+              <line class="hud-tick" x1="1"  y1="20" x2="6"  y2="20" stroke-width="1.5" stroke-linecap="round"/>
+              <line class="hud-tick" x1="34" y1="20" x2="39" y2="20" stroke-width="1.5" stroke-linecap="round"/>
+              <circle class="hud-dot" cx="20" cy="20" r="1.6"/>
+            </svg>`;
+          document.body.appendChild(cursorHud);
+
+          gsap.set(cursorHud, { xPercent: -50, yPercent: -50 });
+          gsap.to(cursorHud.querySelector('.hud-outer'), { rotation: 360, duration: 9, repeat: -1, ease: "none" });
+
+          const moveCursor = {
+            x: gsap.quickTo(cursorHud, "x", { duration: 0.12, ease: "power3.out" }),
+            y: gsap.quickTo(cursorHud, "y", { duration: 0.12, ease: "power3.out" })
+          };
+
+          let cursorRevealed = false;
+          window.addEventListener('mousemove', (e) => {
+            moveCursor.x(e.clientX);
+            moveCursor.y(e.clientY);
+            if (!cursorRevealed) {
+              cursorRevealed = true;
+              cursorHud.classList.add('visible');
+            }
+          });
+
+          document.addEventListener('mouseleave', () => cursorHud.classList.remove('visible'));
+          document.addEventListener('mouseenter', () => {
+            if (cursorRevealed) cursorHud.classList.add('visible');
+          });
+
+          window.addEventListener('mousedown', () => {
+            gsap.to(cursorHud, { scale: 0.8, duration: 0.15, ease: "power2.out" });
+          });
+          window.addEventListener('mouseup', () => {
+            gsap.to(cursorHud, { scale: 1, duration: 0.25, ease: "back.out(2)" });
+          });
+
+          items.forEach(item => {
+            item.addEventListener('mouseenter', () => cursorHud.classList.add('locked'));
+            item.addEventListener('mouseleave', () => cursorHud.classList.remove('locked'));
+          });
+
+          document.querySelectorAll('.menu-item.disabled').forEach(item => {
+            item.addEventListener('mouseenter', () => cursorHud.classList.add('blocked'));
+            item.addEventListener('mouseleave', () => cursorHud.classList.remove('blocked'));
+          });
+        }
 
       });
     </script>
